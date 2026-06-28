@@ -29,7 +29,14 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   exit 1
 fi
 
-PSQL="docker exec ${CONTAINER} psql -U ${USER} -d ${DB} -q"
+# Aumenta /dev/shm para operacoes de VACUUM em tabelas grandes.
+# O compose ja configura shm_size=256mb, mas docker exec usa o default de 64mb.
+PSQL="docker exec --shm-size=512mb ${CONTAINER} psql -U ${USER} -d ${DB} -q"
+
+echo ""
+echo "--- Parando backend do Ticketz ---"
+cd ~/ticketz-docker-acme || exit 1
+docker compose stop backend
 
 echo ""
 echo "--- Antes da limpeza ---"
@@ -58,7 +65,6 @@ ${PSQL} -c "SELECT 'BaileysKeys sessions' AS item, COUNT(*) AS qtd FROM \"Bailey
 
 echo ""
 echo "--- Reiniciando toda a stack Ticketz ---"
-cd ~/ticketz-docker-acme || exit 1
 docker compose down
 docker compose up -d
 

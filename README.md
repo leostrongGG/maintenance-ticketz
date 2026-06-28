@@ -37,13 +37,9 @@ Este script automatiza tarefas de manutenção que evitam lentidão e instabilid
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/maintenance-ticketz.git ~/maintenance-ticketz
+git clone https://github.com/leostrongGG/maintenance-ticketz.git ~/maintenance-ticketz
 cd ~/maintenance-ticketz
 chmod +x maintenance-ticketz.sh
-
-# Copiar para /root (recomendado para execução via cron)
-sudo cp maintenance-ticketz.sh /root/maintenance-ticketz.sh
-sudo chmod +x /root/maintenance-ticketz.sh
 sudo touch /var/log/maintenance-ticketz.log
 ```
 
@@ -73,7 +69,7 @@ Adicione a linha:
 
 ```cron
 # Manutenção preventiva Ticketz - domingo 03h30
-30 3 * * 0 /root/maintenance-ticketz.sh >> /var/log/maintenance-ticketz.log 2>&1
+30 3 * * 0 cd ~/maintenance-ticketz && ./maintenance-ticketz.sh >> /var/log/maintenance-ticketz.log 2>&1
 ```
 
 ## 📊 O que o script faz
@@ -101,7 +97,7 @@ sudo tail -n 100 /var/log/maintenance-ticketz.log
 - **Downtime**: o script reinicia toda a stack Ticketz. Em geral causa 30-90 segundos de indisponibilidade.
 - **Execução manual**: para rodar fora do horário agendado:
   ```bash
-  sudo /root/maintenance-ticketz.sh
+  cd ~/maintenance-ticketz && sudo ./maintenance-ticketz.sh
   ```
 - **Backup**: embora o script não altere dados de negócio, recomenda-se manter backups regulares do banco de dados.
 

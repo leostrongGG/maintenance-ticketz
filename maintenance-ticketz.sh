@@ -51,13 +51,22 @@ ${PSQL} -c "DELETE FROM \"UserSocketSessions\" WHERE \"createdAt\" < NOW() - INT
 
 echo ""
 echo "--- Executando VACUUM ANALYZE ---"
-# Para tabelas grandes, roda dentro do container via bash para herdar /dev/shm do postgres
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Messages\";'"
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Contacts\";'"
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"TicketTraking\";'"
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Tickets\";'"
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"BaileysKeys\";'"
-docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"UserSocketSessions\";'"
+# Reduz maintenance_work_mem para caber no /dev/shm do container (256 MB).
+# Sem isso o PostgreSQL tenta alocar 512 MB (valor do override) e falha.
+VACUUM_SQL=$(cat <<'EOF'
+SET maintenance_work_mem = '128MB';
+SET max_parallel_maintenance_workers = 0;
+SET max_parallel_workers_per_gather = 0;
+VACUUM ANALYZE "Messages";
+VACUUM ANALYZE "Contacts";
+VACUUM ANALYZE "TicketTraking";
+VACUUM ANALYZE "Tickets";
+VACUUM ANALYZE "BaileysKeys";
+VACUUM ANALYZE "UserSocketSessions";
+EOF
+)
+
+echo "${VACUUM_SQL}" | docker exec -i ${CONTAINER} psql -U ${USER} -d ${DB} -q
 
 echo ""
 echo "--- Depois da limpeza ---"

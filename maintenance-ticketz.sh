@@ -29,9 +29,8 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   exit 1
 fi
 
-# Aumenta /dev/shm para operacoes de VACUUM em tabelas grandes.
-# O compose ja configura shm_size=256mb, mas docker exec usa o default de 64mb.
-PSQL="docker exec --shm-size=512mb ${CONTAINER} psql -U ${USER} -d ${DB} -q"
+# Executa psql dentro do container PostgreSQL, onde /dev/shm tem o shm_size configurado no compose.
+PSQL="docker exec ${CONTAINER} psql -U ${USER} -d ${DB} -q"
 
 echo ""
 echo "--- Parando backend do Ticketz ---"
@@ -52,12 +51,13 @@ ${PSQL} -c "DELETE FROM \"UserSocketSessions\" WHERE \"createdAt\" < NOW() - INT
 
 echo ""
 echo "--- Executando VACUUM ANALYZE ---"
-${PSQL} -c "VACUUM ANALYZE \"Messages\";"
-${PSQL} -c "VACUUM ANALYZE \"Contacts\";"
-${PSQL} -c "VACUUM ANALYZE \"TicketTraking\";"
-${PSQL} -c "VACUUM ANALYZE \"Tickets\";"
-${PSQL} -c "VACUUM ANALYZE \"BaileysKeys\";"
-${PSQL} -c "VACUUM ANALYZE \"UserSocketSessions\";"
+# Para tabelas grandes, roda dentro do container via bash para herdar /dev/shm do postgres
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Messages\";'"
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Contacts\";'"
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"TicketTraking\";'"
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"Tickets\";'"
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"BaileysKeys\";'"
+docker exec ${CONTAINER} bash -c "psql -U ${USER} -d ${DB} -q -c 'VACUUM ANALYZE \"UserSocketSessions\";'"
 
 echo ""
 echo "--- Depois da limpeza ---"
